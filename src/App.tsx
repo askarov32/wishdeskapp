@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 
 interface Wish {
@@ -11,14 +11,23 @@ interface Wish {
 }
 
 function App() {
-  const [wishes, setWishes] = useState<Wish[]>([]);
+  const [wishes, setWishes] = useState<Wish[]>(() => {
+    const saved = localStorage.getItem('wishes');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [text, setText] = useState('');
   const [forWhom, setForWhom] = useState('вдвоем');
   const [priority, setPriority] = useState('обычное');
   const [comment, setComment] = useState('');
 
+  useEffect(() => {
+    localStorage.setItem('wishes', JSON.stringify(wishes));
+  }, [wishes]);
+
   const handleAdd = () => {
     if (!text.trim()) return;
+
     const newWish: Wish = {
       id: Date.now(),
       text,
@@ -27,17 +36,23 @@ function App() {
       comment,
       done: false,
     };
+
     setWishes([newWish, ...wishes]);
     setText('');
     setComment('');
   };
 
   const toggleDone = (id: number) => {
-    setWishes(
-      wishes.map(wish =>
-        wish.id === id ? { ...wish, done: !wish.done } : wish
-      )
-    );
+    setWishes(wishes.map(wish =>
+      wish.id === id ? { ...wish, done: !wish.done } : wish
+    ));
+  };
+
+  const clearAll = () => {
+    if (window.confirm('Удалить все желания?')) {
+      setWishes([]);
+      localStorage.removeItem('wishes');
+    }
   };
 
   return (
@@ -70,25 +85,28 @@ function App() {
         </div>
       </div>
 
-      <div className="wishes">
-        {wishes.map(wish => (
-          <div
-            key={wish.id}
-            className={`card ${wish.done ? 'done' : ''} priority-${wish.priority}`}
-          >
-            <div className="card-header">
-              <div className="card-text">{wish.text}</div>
-              <button className="done-btn" onClick={() => toggleDone(wish.id)}>
-                {wish.done ? '↩️' : '✅'}
-              </button>
+      {wishes.length > 0 && (
+        <div className="wishes">
+          {wishes.map(wish => (
+            <div
+              key={wish.id}
+              className={`card ${wish.done ? 'done' : ''} priority-${wish.priority}`}
+            >
+              <div className="card-header">
+                <div className="card-text">{wish.text}</div>
+                <button className="done-btn" onClick={() => toggleDone(wish.id)}>
+                  {wish.done ? '↩️' : '✅'}
+                </button>
+              </div>
+              <div className="card-meta">🎯 {wish.forWhom}</div>
+              {wish.comment && (
+                <div className="card-comment">💬 {wish.comment}</div>
+              )}
             </div>
-            <div className="card-meta">🎯 {wish.forWhom}</div>
-            {wish.comment && (
-              <div className="card-comment">💬 {wish.comment}</div>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+          <button className="clear-btn" onClick={clearAll}>🗑 Очистить всё</button>
+        </div>
+      )}
     </div>
   );
 }
