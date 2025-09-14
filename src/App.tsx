@@ -10,6 +10,8 @@ interface Wish {
   done: boolean;
 }
 
+type Theme = 'auto' | 'light' | 'dark' | 'pastel';
+
 function App() {
   const [wishes, setWishes] = useState<Wish[]>(() => {
     const saved = localStorage.getItem('wishes');
@@ -21,13 +23,34 @@ function App() {
   const [priority, setPriority] = useState('обычное');
   const [comment, setComment] = useState('');
 
+  // новые настройки UI
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'auto');
+  const [compact, setCompact] = useState<boolean>(() => localStorage.getItem('compact') === '1');
+
+  // сохраняем желания
   useEffect(() => {
     localStorage.setItem('wishes', JSON.stringify(wishes));
   }, [wishes]);
 
+  // применяем тему
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'auto') {
+      root.removeAttribute('data-theme');
+    } else {
+      root.setAttribute('data-theme', theme);
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  // применяем компактный режим
+  useEffect(() => {
+    document.body.classList.toggle('compact', compact);
+    localStorage.setItem('compact', compact ? '1' : '0');
+  }, [compact]);
+
   const handleAdd = () => {
     if (!text.trim()) return;
-
     const newWish: Wish = {
       id: Date.now(),
       text,
@@ -36,7 +59,6 @@ function App() {
       comment,
       done: false,
     };
-
     setWishes([newWish, ...wishes]);
     setText('');
     setComment('');
@@ -59,6 +81,29 @@ function App() {
     <div className="container">
       <h1 className="title">💖 Наша доска желаний</h1>
 
+      {/* Панель настроек */}
+      <div className="toolbar">
+        <label className="toolbar-item">
+          Тема:
+          <select value={theme} onChange={(e) => setTheme(e.target.value as Theme)}>
+            <option value="auto">Авто</option>
+            <option value="light">Светлая</option>
+            <option value="dark">Тёмная</option>
+            <option value="pastel">Пастель</option>
+          </select>
+        </label>
+
+        <label className="toolbar-item switch">
+          <input
+            type="checkbox"
+            checked={compact}
+            onChange={(e) => setCompact(e.target.checked)}
+          />
+          <span>Компактно</span>
+        </label>
+      </div>
+
+      {/* Форма */}
       <div className="form">
         <input
           placeholder="Что ты хочешь сделать?"
@@ -99,9 +144,7 @@ function App() {
                 </button>
               </div>
               <div className="card-meta">🎯 {wish.forWhom}</div>
-              {wish.comment && (
-                <div className="card-comment">💬 {wish.comment}</div>
-              )}
+              {wish.comment && <div className="card-comment">💬 {wish.comment}</div>}
             </div>
           ))}
           <button className="clear-btn" onClick={clearAll}>🗑 Очистить всё</button>
